@@ -17,6 +17,7 @@ const App: React.FC = () => {
   
   // Comparison State
   const [compareDocIds, setCompareDocIds] = useState<string[]>([]);
+  const [isAddTreeOpen, setIsAddTreeOpen] = useState(false);
   
   // Global Hover State for Comparison Mode
   const [hoveredNode, setHoveredNode] = useState<{ docId: string; nodeId: string } | null>(null);
@@ -113,6 +114,7 @@ const App: React.FC = () => {
     if (!compareDocIds.includes(docId)) {
         setCompareDocIds([...compareDocIds, docId]);
     }
+    setIsAddTreeOpen(false);
   };
 
   const removeFromComparison = (docId: string) => {
@@ -207,25 +209,37 @@ const App: React.FC = () => {
                 <div className="w-full h-full flex flex-col">
                     {/* Top Bar for Comparison Controls */}
                     <div className="h-10 bg-gray-800/50 border-b border-gray-700 flex items-center px-4 gap-4 shrink-0">
-                        <div className="relative group">
-                             <button className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-full transition-colors">
+                        <div className="relative">
+                             <button 
+                                onClick={() => setIsAddTreeOpen(!isAddTreeOpen)}
+                                className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-full transition-colors"
+                             >
                                 <Plus className="w-3 h-3" /> Add Tree
                              </button>
-                             <div className="absolute left-0 top-full mt-2 w-56 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 hidden group-hover:block p-1">
-                                {documents.filter(d => !compareDocIds.includes(d.id)).length === 0 && (
-                                    <div className="p-2 text-xs text-gray-500 text-center">No other documents available</div>
-                                )}
-                                {documents.filter(d => !compareDocIds.includes(d.id)).map(doc => (
-                                    <button
-                                        key={doc.id}
-                                        onClick={() => addToComparison(doc.id)}
-                                        className="w-full text-left px-3 py-2 hover:bg-gray-700 text-gray-200 text-xs rounded truncate flex items-center gap-2"
-                                    >
-                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                        {doc.name}
-                                    </button>
-                                ))}
-                             </div>
+                             
+                             {/* Backdrop to close dropdown */}
+                             {isAddTreeOpen && (
+                                <div className="fixed inset-0 z-40" onClick={() => setIsAddTreeOpen(false)}></div>
+                             )}
+
+                             {/* Dropdown Menu */}
+                             {isAddTreeOpen && (
+                                 <div className="absolute left-0 top-full mt-2 w-56 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 p-1">
+                                    {documents.filter(d => !compareDocIds.includes(d.id)).length === 0 && (
+                                        <div className="p-2 text-xs text-gray-500 text-center">No other documents available</div>
+                                    )}
+                                    {documents.filter(d => !compareDocIds.includes(d.id)).map(doc => (
+                                        <button
+                                            key={doc.id}
+                                            onClick={() => addToComparison(doc.id)}
+                                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-gray-200 text-xs rounded truncate flex items-center gap-2"
+                                        >
+                                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                            {doc.name}
+                                        </button>
+                                    ))}
+                                 </div>
+                             )}
                         </div>
                         <span className="text-xs text-gray-500">
                             {compareDocIds.length} documents visible
