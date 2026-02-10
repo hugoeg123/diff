@@ -21,6 +21,8 @@ const App: React.FC = () => {
   
   // Global Hover State for Comparison Mode
   const [hoveredNode, setHoveredNode] = useState<{ docId: string; nodeId: string } | null>(null);
+  // New: Global Key Highlight State
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   const handleUpload = async (files: FileList) => {
     const jsonFiles: File[] = [];
@@ -121,6 +123,18 @@ const App: React.FC = () => {
       setCompareDocIds(prev => prev.filter(id => id !== docId));
   };
 
+  const handleNodeHover = (docId: string, nodeId: string | null) => {
+      if (nodeId) {
+          setHoveredNode({ docId, nodeId });
+          const doc = documents.find(d => d.id === docId);
+          const node = doc?.flatNodes.find(n => n.id === nodeId);
+          if (node) setHoveredKey(node.key);
+      } else {
+          setHoveredNode(null);
+          setHoveredKey(null);
+      }
+  };
+
   // Get active document objects
   const activeDoc = documents.find(d => d.id === activeDocId);
   const hoveredDoc = hoveredNode ? documents.find(d => d.id === hoveredNode.docId) || null : null;
@@ -132,10 +146,6 @@ const App: React.FC = () => {
         activeDocId={activeDocId}
         onSelect={(id) => {
             setActiveDocId(id);
-            if (!compareDocIds.includes(id) && viewMode === 'edit') {
-                 // If switching in edit mode, just reset compare list or keep sync? 
-                 // Let's just set selection.
-            }
         }}
         onRemove={(id) => {
             setDocuments(prev => prev.filter(d => d.id !== id));
@@ -143,6 +153,7 @@ const App: React.FC = () => {
             setCompareDocIds(prev => prev.filter(cid => cid !== id));
         }}
         onUpload={handleUpload}
+        onKeyHover={(key) => setHoveredKey(key)}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -270,7 +281,8 @@ const App: React.FC = () => {
                                         <TopicTree 
                                             nodes={doc.flatNodes} 
                                             hoveredNodeId={hoveredNode?.docId === doc.id ? hoveredNode.nodeId : null}
-                                            onHover={(nodeId) => nodeId ? setHoveredNode({ docId: doc.id, nodeId }) : setHoveredNode(null)}
+                                            onHover={(nodeId) => handleNodeHover(doc.id, nodeId)}
+                                            highlightedKey={hoveredKey}
                                         />
                                     </div>
                                     {/* Resize Handle Indicator */}
