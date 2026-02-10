@@ -1,0 +1,5 @@
+{
+  "name": "Tree Diff Studio",
+  "description": "A comprehensive tool for analyzing, editing, and comparing JSON structures against original source text. Features tree visualization, hashtag-based structural editing, and visual diffing.",
+  "requestFramePermissions": []
+}
