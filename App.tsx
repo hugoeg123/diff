@@ -6,9 +6,9 @@ import TopicTree from './components/TopicTree';
 import FocusPanel from './components/FocusPanel';
 import { DocumentData, FlatNode } from './types';
 import { flattenJson, checkMatch } from './utils';
-import { Columns, Square, Plus, X, Maximize2 } from 'lucide-react';
+import { Columns, Square, Plus, X, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const App: React.FC = () => {
+export default function App() {
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   
@@ -121,6 +121,18 @@ const App: React.FC = () => {
 
   const removeFromComparison = (docId: string) => {
       setCompareDocIds(prev => prev.filter(id => id !== docId));
+  };
+
+  const moveTree = (index: number, direction: 'left' | 'right') => {
+      if (direction === 'left' && index > 0) {
+          const newIds = [...compareDocIds];
+          [newIds[index], newIds[index - 1]] = [newIds[index - 1], newIds[index]];
+          setCompareDocIds(newIds);
+      } else if (direction === 'right' && index < compareDocIds.length - 1) {
+          const newIds = [...compareDocIds];
+          [newIds[index], newIds[index + 1]] = [newIds[index + 1], newIds[index]];
+          setCompareDocIds(newIds);
+      }
   };
 
   const handleNodeHover = (docId: string, nodeId: string | null) => {
@@ -259,7 +271,7 @@ const App: React.FC = () => {
 
                     {/* Comparison Grid (Horizontal Scroll) */}
                     <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-900/50 p-2 flex gap-2">
-                        {compareDocIds.map(docId => {
+                        {compareDocIds.map((docId, index) => {
                             const doc = documents.find(d => d.id === docId);
                             if (!doc) return null;
                             return (
@@ -268,8 +280,27 @@ const App: React.FC = () => {
                                     className="flex flex-col bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden min-w-[300px] w-[350px] resize-x relative group"
                                     style={{ maxWidth: '800px' }}
                                 >
-                                    <div className="h-9 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 shrink-0 handle cursor-grab active:cursor-grabbing">
-                                        <span className="text-xs font-bold text-gray-300 truncate">{doc.name}</span>
+                                    <div className="h-9 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 shrink-0 handle">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                            {/* Reorder Controls */}
+                                            <div className="flex gap-0.5">
+                                                <button 
+                                                    onClick={() => moveTree(index, 'left')}
+                                                    disabled={index === 0}
+                                                    className="p-0.5 hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                >
+                                                    <ChevronLeft className="w-3 h-3 text-gray-400" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => moveTree(index, 'right')}
+                                                    disabled={index === compareDocIds.length - 1}
+                                                    className="p-0.5 hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                >
+                                                    <ChevronRight className="w-3 h-3 text-gray-400" />
+                                                </button>
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-300 truncate" title={doc.name}>{doc.name}</span>
+                                        </div>
                                         <button 
                                             onClick={() => removeFromComparison(doc.id)}
                                             className="text-gray-500 hover:text-red-400 p-1 rounded"
@@ -312,6 +343,4 @@ const App: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default App;
+}

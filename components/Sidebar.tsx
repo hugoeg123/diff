@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { Upload, FileJson, FileText, Plus, X, Hash } from 'lucide-react';
+import { Upload, FileJson, FileText, X, Hash, Copy, FileSpreadsheet, Download } from 'lucide-react';
 import { DocumentData } from '../types';
+import { getHashTags } from '../utils';
 
 interface SidebarProps {
   documents: DocumentData[];
@@ -46,9 +47,85 @@ const Sidebar: React.FC<SidebarProps> = ({ documents, activeDocId, onSelect, onR
 
     // Convert to array, filter for > 1 occurance, and sort by frequency
     return Object.entries(keyCounts)
-        .filter(([key, count]) => count > 1 && key.trim() !== '' && !key.startsWith('[')) // exclude array indices if desired, currently keeping standard keys
+        .filter(([key, count]) => count > 1 && key.trim() !== '' && !key.startsWith('['))
         .sort((a, b) => b[1] - a[1]);
   }, [documents]);
+
+  // --- Report Generation Logic ---
+
+  const generateAnalysisData = () => {
+    // 1. repeated keys details
+    const analysis = commonKeys.map(([key, count]) => {
+        const occurrences = documents
+            .filter(d => d.flatNodes.some(n => n.key === key))
+            .map(d => {
+                const node = d.flatNodes.find(n => n.key === key);
+                return {
+                    docName: d.name,
+                    depth: node ? node.depth : 0,
+                    structure: node ? getHashTags(node.depth) : ''
+                };
+            });
+        return { key, count, occurrences };
+    });
+
+    // 2. Full structure summary
+    const structures = documents.map(doc => ({
+        docName: doc.name,
+        nodes: doc.flatNodes.map(n => ({
+            key: n.key,
+            depth: n.depth,
+            structure: getHashTags(n.depth),
+            type: n.value === '' ? 'Container' : 'Leaf'
+        }))
+    }));
+
+    return { analysis, structures };
+  };
+
+  const handleCopyJsonReport = () => {
+    const data = generateAnalysisData();
+    const jsonStr = JSON.stringify(data, null, 2);
+    navigator.clipboard.writeText(jsonStr);
+    alert("Analysis JSON copied to clipboard!");
+  };
+
+  const handleDownloadCsvReport = () => {
+    const { analysis, structures } = generateAnalysisData();
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Section 1: Repeated Keys Analysis
+    csvContent += "SECTION 1: REPEATED KEYS ANALYSIS\n";
+    csvContent += "Key,Total Frequency,Document Name,Indentation Level (Structure),Is Subcategory?\n";
+    
+    analysis.forEach(item => {
+        item.occurrences.forEach(occ => {
+             // CSV Escape logic
+             const safeKey = item.key.includes(',') ? `"${item.key}"` : item.key;
+             csvContent += `${safeKey},${item.count},${occ.docName},${occ.structure} ${safeKey},${occ.depth > 0 ? 'Yes' : 'No'}\n`;
+        });
+    });
+
+    csvContent += "\n\nSECTION 2: FULL DOCUMENT STRUCTURES\n";
+    csvContent += "Document,Indentation,Key,Type\n";
+
+    structures.forEach(doc => {
+        doc.nodes.forEach(node => {
+             const safeKey = node.key.includes(',') ? `"${node.key}"` : node.key;
+             csvContent += `${doc.docName},${node.structure},${safeKey},${node.type}\n`;
+        });
+        csvContent += "\n"; // Spacer between docs
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "tree_diff_analysis_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
@@ -104,8 +181,26 @@ const Sidebar: React.FC<SidebarProps> = ({ documents, activeDocId, onSelect, onR
         {/* Common Keys Analysis */}
         {commonKeys.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-700 flex flex-col min-h-0 flex-1">
-                <div className="px-2 text-[10px] text-gray-500 font-bold uppercase mb-2 flex items-center gap-2">
-                    <Hash className="w-3 h-3" /> Repeated Keys
+                <div className="px-2 mb-2 flex items-center justify-between">
+                     <span className="text-[10px] text-gray-500 font-bold uppercase flex items-center gap-2">
+                        <Hash className="w-3 h-3" /> Repeated Keys
+                     </span>
+                     <div className="flex gap-1">
+                        <button 
+                            onClick={handleCopyJsonReport} 
+                            title="Copy JSON Report"
+                            className="text-gray-500 hover:text-white transition-colors p-1"
+                        >
+                            <Copy className="w-3 h-3" />
+                        </button>
+                        <button 
+                            onClick={handleDownloadCsvReport} 
+                            title="Download CSV Report"
+                            className="text-gray-500 hover:text-green-400 transition-colors p-1"
+                        >
+                            <FileSpreadsheet className="w-3 h-3" />
+                        </button>
+                     </div>
                 </div>
                 <div className="overflow-y-auto space-y-1 pr-1 custom-scrollbar flex-1">
                     {commonKeys.map(([key, count]) => (
